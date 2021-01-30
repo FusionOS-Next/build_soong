@@ -2436,6 +2436,20 @@ func (c *Module) shouldUseApiSurface() bool {
 	return false
 }
 
+func RewriteHeaderLibs(list []string) (newHeaderLibs []string) {
+	newHeaderLibs = []string{}
+	for _, entry := range list {
+		// Replace device_kernel_headers with generated_kernel_headers
+		// for inline kernel building
+		if entry == "device_kernel_headers" {
+			newHeaderLibs = append(newHeaderLibs, "generated_kernel_headers")
+			continue
+		}
+		newHeaderLibs = append(newHeaderLibs, entry)
+	}
+	return newHeaderLibs
+}
+
 func (c *Module) DepsMutator(actx android.BottomUpMutatorContext) {
 	if !c.Enabled(actx) {
 		return
@@ -2468,9 +2482,14 @@ func (c *Module) DepsMutator(actx android.BottomUpMutatorContext) {
 	variantNdkLibs := []string{}
 	variantLateNdkLibs := []string{}
 	if ctx.Os() == android.Android {
+		deps.HeaderLibs = RewriteHeaderLibs(deps.HeaderLibs)
+
+		deps.HeaderLibs = RewriteHeaderLibs(deps.HeaderLibs)
+
 		deps.SharedLibs, variantNdkLibs = FilterNdkLibs(c, ctx.Config(), deps.SharedLibs)
 		deps.LateSharedLibs, variantLateNdkLibs = FilterNdkLibs(c, ctx.Config(), deps.LateSharedLibs)
 		deps.ReexportSharedLibHeaders, _ = FilterNdkLibs(c, ctx.Config(), deps.ReexportSharedLibHeaders)
+
 	}
 
 	for _, lib := range deps.HeaderLibs {
